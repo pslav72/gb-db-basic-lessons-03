@@ -1,0 +1,61 @@
+3. Проанализировать несколько запросов с помощью EXPLAIN.
+
+Взял для анализа запрос из 3 урока, в котором происходит поиск всех городов региона.
+SELECT 
+    _countries.title AS country,
+    _regions.title AS region,
+    _cities.title AS citi
+FROM
+    _regions
+        JOIN
+    (_countries, _cities) ON (_cities.country_id = _countries.id
+        AND _cities.region_id = _regions.id)
+WHERE
+    _regions.title = 'Московская область'
+;
+Исполнение данного запроса происходит 0.029sec. Cost = 314485
+По скриншоту EXPLAIN tsk3-scr-1-1.png, наблюдаем очень большую выборку строк 2,28M из таблицы _cities, которая участвует в JOIN. EXPLAIN tsk3-scr-1-2.png 2 строчка видим выборку из 2,28M строк и полезных данных 10%.
+Значит тут можем провести оптимизацию.
+
+Упрощаем запрос. 
+Анализируя таблицу _regions видим поля country_id и id, которых хватить для выборки городов из _cities.
+SELECT 
+        _regions.country_id AS country_id, _regions.id AS region_id
+    FROM
+        _regions
+    WHERE
+        _regions.title = 'Московская область';
+Время исполнения 0,0021sec
+EXPLAIN tsk3-scr-2-1.png, tsk3-scr-2-2.png, видим 100% фильтрацию и на выходе 1 строчка, низкий cost.
+
+Производим выборку городов.
+SELECT 
+    *
+FROM
+    _cities,
+    (SELECT 
+        _regions.country_id AS country_id, _regions.id AS region_id
+    FROM
+        _regions
+    WHERE
+        _regions.title = 'Московская область') as subq
+WHERE
+    _cities.country_id = subq.country_id
+        AND _cities.region_id = subq.region_id;
+;
+
+Время исполнение, 0,0074 sec. EXPLAIN tsk3-scr-3-1.png. Результат исполнения уже намного лучше. 
+Но все еще возвращается большое количество строк, 11400.
+
+Создам индекс 
+ALTER TABLE `geodata`.`_cities` 
+ADD INDEX `idx_cities_region_id_country_id` (`country_id` ASC, `region_id` ASC) VISIBLE;
+;
+
+Время исполнение, 0,0037 sec, Cost = 534. EXPLAIN tsk3-scr-3-2.png. Результат исполнения в разы лучше. 
+Возвращаемое количество строк 809.
+Оптимизацию произвели в 10 раз.
+
+Итог, для себя.
+Написав первый вариант запроса, не задумывался об оптимальности его. Субъективно он исполнился быстро и посчитал задачу исполненной.
+EXPLAIN позволяет заглянуть на внутренние процессы и увидить подводные камни. Заглянуть более тщятельно в струтуру таблиц и выстроить новые запросы.
