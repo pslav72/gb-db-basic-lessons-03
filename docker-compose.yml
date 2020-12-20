@@ -1,0 +1,42 @@
+version: "3.7"
+services:
+
+  gb-mongo:
+      container_name: gb-mongo
+      image:  mongo
+      volumes:
+        - ./datadir:/data/db
+      restart: always
+      environment:
+        MONGO_INITDB_ROOT_USERNAME: root
+        MONGO_INITDB_ROOT_PASSWORD: plkplk
+      ports:
+        - 27017:27017
+      networks:
+        - gb-mongo-net
+
+  mongo-express:
+      container_name: mongo-express
+      image: mongo-express
+      restart: always
+      ports:
+        - 8081:8081
+      environment:
+        ME_CONFIG_MONGODB_ADMINUSERNAME: root
+        ME_CONFIG_MONGODB_ADMINPASSWORD: plkplk
+        ME_CONFIG_MONGODB_SERVER: "gb-mongo"
+      networks:
+        - gb-mongo-net
+  
+networks:
+  gb-mongo-net:
+          #    driver: overlay
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "true"
+      com.docker.network.bridge.name: "gb-mongo-net"
+    attachable: true
+    ipam:
+            #      driver: overlay
+      config:
+        - subnet: "100.0.0.128/27"

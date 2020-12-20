@@ -1,1 +1,0 @@
-# gb-db-basic-lessons-03
