@@ -1,0 +1,41 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:12
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      cap-add: NET_ADMIN
+    volumes:
+            - ./docker/psql/db:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - frontend
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@example.com
+      PGADMIN_DEFAULT_PASSWORD: polyakov
+    volumes:
+            - ./docker/pgadmin:/var/lib/pgadmin
+    restart: always
+    networks:
+      - frontend
+    ports:
+      - 8081:80
+
+networks:
+  frontend:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+      com.docker.network.bridge.name: "db-pgsql"
+    ipam:
+      driver: default
+      config:
+        - subnet: "100.0.0.0/27"
+
